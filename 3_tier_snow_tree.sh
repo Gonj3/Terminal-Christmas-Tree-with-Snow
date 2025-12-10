@@ -18,32 +18,42 @@ RESET=$'\033[0m'
 BOLD=$'\033[1m'
 
 # ---------------------------
-# THREE-TIER TREE DEFINITION
+# TREE TIERS (Three-tiered, centred)
 # ---------------------------
-tree_rows=(
-"                     *                     "  # pulsing star
-"                    +#*                    "
-"                   +###*+                  "
-"                  +#####*#+                "
-"                 +#######*#+               "
-"               " # top tier
 
-"                  +#########+               "
-"                 +###########*+             "
-"                +#############*#+           "
-"               +###############*#+          "
-"             " # middle tier
-
-"                +#################+          "
-"               +###################*+       "
-"              +#####################*#+     "
-"             +#######################*#+    "
-"            +#########################*#+   "
-"           +###########################*#+  "
-"          +#############################*#+ " # bottom tier
-"                    |||||                 "
-"                    |||||                 "
+# Top tier (small)
+tier1=(
+"  ***  "
+"  +#*  "
+" +###*+"
+" +#####*#+"
 )
+
+# Middle tier (medium)
+tier2=(
+"   +#########+   "
+"  +###########*+ "
+" +#############*#+"
+" +###############*#+"
+)
+
+# Bottom tier (large)
+tier3=(
+"    +#################+    "
+"   +###################*+  "
+"  +#####################*#+ "
+" +#######################*#+"
+" +#########################*#+"
+)
+
+# Trunk
+trunk=(
+"       |||||       "
+"       |||||       "
+)
+
+# Combine tiers
+tree_rows=("${tier1[@]}" "" "${tier2[@]}" "" "${tier3[@]}" "" "${trunk[@]}")
 
 tree_height=${#tree_rows[@]}
 tree_width=0
@@ -57,27 +67,25 @@ tree_start_col=$(( (COLUMNS / 2) - (tree_width / 2) + 1 ))
 [ "$tree_start_col" -lt 1 ] && tree_start_col=1
 
 # ---------------------------
+# DRAW TREE FUNCTION
+# ---------------------------
 draw_tree() {
   local tick=$1
   for ((ri=0; ri<tree_height; ri++)); do
     row="${tree_rows[$ri]}"
+    [ -z "$row" ] && continue  # skip empty lines
+
     printf "\033[%s;%sH" $((tree_start_row + ri)) "$tree_start_col"
     for ((ci=0; ci<${#row}; ci++)); do
       ch="${row:$ci:1}"
       out="$ch"
-      # pulsing star
-      if [ "$ri" -eq 0 ] && [ "$ch" == "*" ]; then
-        rnd=$(( (tick % 6) + 1 ))
-        case $rnd in
-          1) color=$RED ;;
-          2) color=$YELLOW ;;
-          3) color=$CYAN ;;
-          4) color=$GREEN ;;
-          5) color=$RED ;;
-          6) color=$YELLOW ;;
-        esac
-        out="${BOLD}${color}*\033[0m"
-      # flashing lights + # *
+
+      # Bigger pulsing star on top (★)
+      if [[ "$ch" == "★" ]]; then
+        colors=($RED $YELLOW $CYAN $GREEN)
+        color=${colors[$((tick % 4))]}
+        out="${BOLD}${color}★${RESET}"
+      # Flashing lights + # *
       elif [[ "$ch" == "+" || "$ch" == "#" || "$ch" == "*" ]]; then
         rnd=$(( (ri+ci+tick+RANDOM%4) % 4 ))
         case $rnd in
@@ -92,10 +100,10 @@ draw_tree() {
         else
           out="${GREEN}${ch}${RESET}"
         fi
-      # / \ outlines
+      # Tree outlines: / \ (if any)
       elif [[ "$ch" == "/" || "$ch" == "\\" ]]; then
         out="${GREEN}${ch}${RESET}"
-      # trunk
+      # Trunk: |
       elif [[ "$ch" == "|" ]]; then
         out="${BROWN}${ch}${RESET}"
       fi
@@ -137,6 +145,8 @@ move_flake() {
 }
 
 # ---------------------------
+# MAIN LOOP
+# ---------------------------
 clear
 tick=0
 while :; do
@@ -151,12 +161,15 @@ while :; do
     [ "$tree_start_col" -lt 1 ] && tree_start_col=1
     clear
   fi
+
   draw_tree "$tick"
+
   col=$(( (RANDOM % COLUMNS) + 1 ))
   move_flake "$col"
   for x in "${!lastflakes[@]}"; do
     move_flake "$x"
   done
+
   tick=$((tick + 1))
   sleep 0.12
 done
