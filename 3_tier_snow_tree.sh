@@ -23,7 +23,9 @@ BOLD=$'\033[1m'
 
 # Top tier (small)
 tier1=(
-"  ***  "
+"  **  "
+" **** "
+"  **  "
 "  +#*  "
 " +###*+"
 " +#####*#+"
@@ -76,17 +78,23 @@ draw_tree() {
     [ -z "$row" ] && continue  # skip empty lines
 
     printf "\033[%s;%sH" $((tree_start_row + ri)) "$tree_start_col"
+
+    # Handle the three-row star separately
+    if [ "$ri" -le 2 ]; then
+      # Single pulsing colour for star
+      colors=($RED $YELLOW $GREEN $CYAN)
+      color=${colors[$((tick % 4))]}
+      printf "${BOLD}${color}%s${RESET}" "$row"
+      continue
+    fi
+
+    # Remaining tree rows with flashing lights
     for ((ci=0; ci<${#row}; ci++)); do
       ch="${row:$ci:1}"
       out="$ch"
 
-      # Bigger pulsing star on top (★)
-      if [[ "$ch" == "★" ]]; then
-        colors=($RED $YELLOW $CYAN $GREEN)
-        color=${colors[$((tick % 4))]}
-        out="${BOLD}${color}★${RESET}"
       # Flashing lights + # *
-      elif [[ "$ch" == "+" || "$ch" == "#" || "$ch" == "*" ]]; then
+      if [[ "$ch" == "+" || "$ch" == "#" || "$ch" == "*" ]]; then
         rnd=$(( (ri+ci+tick+RANDOM%4) % 4 ))
         case $rnd in
           0) color=$RED ;;
@@ -100,7 +108,7 @@ draw_tree() {
         else
           out="${GREEN}${ch}${RESET}"
         fi
-      # Tree outlines: / \ (if any)
+      # Tree outlines: / \
       elif [[ "$ch" == "/" || "$ch" == "\\" ]]; then
         out="${GREEN}${ch}${RESET}"
       # Trunk: |
@@ -111,6 +119,7 @@ draw_tree() {
     done
   done
 }
+
 
 erase_at() {
   local r=$1
